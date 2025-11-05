@@ -1,26 +1,42 @@
 import { useState, useEffect } from "react";
 import { Calendar, Bookmark } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { logout } from "../store/authSlice";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useSelector } from "react-redux";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState({
-    name: "John Doe",
-    email: "John@nexusgenisis.ai",
-    joined: "August 2025",
-    savedTopics: [
-      "AI in Healthcare",
-      "Sustainable Fashion",
-      "Quantum Computing Trends",
-      "FinTech Market Analysis",
-    ],
-  });
+  const authUser = useSelector((state) => state.auth.user);
+
+  const [user, setUser] = useState(null);
+
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: user.name, email: user.email });
+  const [form, setForm] = useState({ name: "", email: "" });
 
   useEffect(() => {
-    // In future: Fetch user info from backend (/api/user/me)
-    // setUser(await fetchUserData());
-  }, []);
+    if (user) {
+      setForm({ name: user.name, email: user.email });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (authUser) {
+      setUser({
+        name: authUser.name,
+        email: authUser.email,
+        joined: "January 2025", // Temporary — later fetch from DB
+        savedTopics: [
+          "AI in Healthcare",
+          "Quantum Computing",
+          "FinTech Market Analysis",
+        ],
+      });
+    }
+  }, [authUser]);
 
   const handleEdit = () => setEditing(true);
   const handleCancel = () => setEditing(false);
@@ -32,8 +48,17 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    alert("You have been logged out!"); // Replace with real logout logic
+    dispatch(logout());
+    toast.success("Logged out successfully!");
+    navigate("/auth");
   };
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-lg">
+        Loading Profile...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-linear-to-b from-indigo-50 to-white">
@@ -117,8 +142,12 @@ export default function ProfilePage() {
               /* Edit Form */
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">Edit Your Profile</h2>
-                  <p className="text-gray-500 text-sm mt-1">Update your information below</p>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Edit Your Profile
+                  </h2>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Update your information below
+                  </p>
                 </div>
 
                 <div>
@@ -140,7 +169,9 @@ export default function ProfilePage() {
                   <input
                     type="email"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
