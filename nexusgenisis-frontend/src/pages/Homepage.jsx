@@ -8,6 +8,9 @@ export default function Homepage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("date-desc");
+  const [quickDateFilter, setQuickDateFilter] = useState("all");
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [lastFetchTime, setLastFetchTime] = useState(null);
   const [categories, setCategories] = useState([
     "All",
@@ -411,8 +414,9 @@ export default function Homepage() {
       return ["All", ...Array.from(allCats).filter((c) => c !== "All")];
     });
 
-    if (activeTab !== "All") {
-      data = data.filter((item) => item.category === activeTab);
+    // Multi-category filter
+    if (selectedCategories.length > 0) {
+      data = data.filter((item) => selectedCategories.includes(item.category));
     }
 
     if (searchTerm) {
@@ -421,13 +425,57 @@ export default function Homepage() {
       );
     }
 
+    // Manual date filter overrides quick filters
     if (dateFilter) {
       data = data.filter((item) => item.date === dateFilter);
+    } else if (quickDateFilter !== "all") {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      data = data.filter((item) => {
+        const itemDate = new Date(item.date);
+        const itemDay = new Date(
+          itemDate.getFullYear(),
+          itemDate.getMonth(),
+          itemDate.getDate()
+        );
+
+        if (quickDateFilter === "today") {
+          return itemDay.getTime() === today.getTime();
+        } else if (quickDateFilter === "week") {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return itemDay >= weekAgo;
+        } else if (quickDateFilter === "month") {
+          const monthAgo = new Date(today);
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          return itemDay >= monthAgo;
+        }
+        return true;
+      });
+    }
+
+    // Sort data
+    if (sortBy === "date-desc") {
+      data = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else if (sortBy === "date-asc") {
+      data = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else if (sortBy === "title-asc") {
+      data = [...data].sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === "title-desc") {
+      data = [...data].sort((a, b) => b.title.localeCompare(a.title));
     }
 
     setFilteredNews(data);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [activeTab, searchTerm, dateFilter, news]);
+  }, [
+    selectedCategories,
+    searchTerm,
+    dateFilter,
+    quickDateFilter,
+    sortBy,
+    news,
+  ]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -444,19 +492,6 @@ export default function Homepage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 -mt-8">
-        {/* Cache Status Banner */}
-        {/* {lastFetchTime && !isLoading && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-blue-600 font-medium">⏱️ Last updated:</span>
-              <span className="text-blue-800">{new Date(lastFetchTime).toLocaleTimeString()}</span>
-            </div>
-            <span className="text-xs text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
-              Cache active (5 min)
-            </span>
-          </div>
-        )} */}
-
         {/* Loading Indicator */}
         {isLoading && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 text-center">
@@ -469,55 +504,147 @@ export default function Homepage() {
           <>
             {/* Search & Filter Bar */}
             <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* Search */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Search News
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Search articles..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                  />
+              <div className="flex flex-col gap-4">
+                {/* Search & Sort Row */}
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* Search */}
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Search News
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Search articles..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Sort By */}
+                  <div className="md:w-64">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sort By
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white"
+                    >
+                      <option value="date-desc">Date (Newest First)</option>
+                      <option value="date-asc">Date (Oldest First)</option>
+                      <option value="title-asc">Title (A-Z)</option>
+                      <option value="title-desc">Title (Z-A)</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* Date Filter */}
-                <div className="md:w-64">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Filter by Date
-                  </label>
-                  <input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                  />
+                {/* Quick Date Filters & Manual Date */}
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* Quick Date Filters */}
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Quick Date Filters
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: "all", label: "All Time" },
+                        { value: "today", label: "Today" },
+                        { value: "week", label: "This Week" },
+                        { value: "month", label: "This Month" },
+                      ].map((filter) => (
+                        <button
+                          key={filter.value}
+                          onClick={() => {
+                            setQuickDateFilter(filter.value);
+                            setDateFilter(""); // Clear manual date filter
+                          }}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            quickDateFilter === filter.value && !dateFilter
+                              ? "bg-indigo-600 text-white shadow-md"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {filter.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Manual Date Filter */}
+                  <div className="md:w-64">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Or Pick a Date
+                    </label>
+                    <input
+                      type="date"
+                      value={dateFilter}
+                      onChange={(e) => {
+                        setDateFilter(e.target.value);
+                        if (e.target.value) {
+                          setQuickDateFilter("all"); // Clear quick filter when manual date is set
+                        }
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Category Tabs */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                Categories
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Categories
+                </h2>
+                {selectedCategories.length > 0 && (
+                  <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+                    {selectedCategories.length} selected
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-3">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveTab(cat)}
-                    className={`px-6 py-3 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${
-                      activeTab === cat
-                        ? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
-                        : "bg-white text-gray-700 hover:bg-linear-to-r hover:from-indigo-50 hover:to-purple-50 shadow-md"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {/* All Button */}
+                <button
+                  onClick={() => setSelectedCategories([])}
+                  className={`px-6 py-3 rounded-full text-sm font-semibold transition-all transform hover:scale-105 ${
+                    selectedCategories.length === 0
+                      ? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
+                      : "bg-white text-gray-700 hover:bg-linear-to-r hover:from-indigo-50 hover:to-purple-50 shadow-md"
+                  }`}
+                >
+                  All
+                </button>
+
+                {/* Category Buttons */}
+                {categories
+                  .filter((cat) => cat !== "All")
+                  .map((cat) => {
+                    const isSelected = selectedCategories.includes(cat);
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedCategories(
+                              selectedCategories.filter((c) => c !== cat)
+                            );
+                          } else {
+                            setSelectedCategories([...selectedCategories, cat]);
+                          }
+                        }}
+                        className={`px-6 py-3 rounded-full text-sm font-semibold transition-all transform hover:scale-105 flex items-center gap-2 ${
+                          isSelected
+                            ? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
+                            : "bg-white text-gray-700 hover:bg-linear-to-r hover:from-indigo-50 hover:to-purple-50 shadow-md"
+                        }`}
+                      >
+                        {isSelected && <span>✓</span>}
+                        {cat}
+                      </button>
+                    );
+                  })}
               </div>
             </div>
 
