@@ -1,48 +1,52 @@
 import { useState } from "react";
+import { toast } from "react-toastify";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function StatsPage() {
   const [query, setQuery] = useState("");
+  const [company, setCompany] = useState("");
+  const [topN, setTopN] = useState("");
+  const [bottomN, setBottomN] = useState("");
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
+  const APP_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  const handleSubmit = (e) => {
+  const API_URL = `${APP_BASE_URL}/query/domainInsight`;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    setLoading(true);
-    setResponse("");
+    if (!query.trim()) return toast.error("Please enter a domain name.");
 
-    // Mocked response — replace with your backend API call
-    setTimeout(() => {
-      const formattedResponse = (
-        <>
-          <p>
-            📊 <strong>Statistical Summary for "{query}"</strong>:
-          </p>
-          <ul className="list-disc list-inside mb-2">
-            <li>
-              <strong>Market Growth:</strong> 12.5% YoY
-            </li>
-            <li>
-              <strong>Top Regions:</strong> North America, APAC
-            </li>
-            <li>
-              <strong>Emerging Players:</strong> DataNova, NexuMind
-            </li>
-            <li>
-              <strong>Key Metrics:</strong> Revenue growth +18%, user retention
-              +30%
-            </li>
-          </ul>
-          <p>
-            Overall, the <strong>{query}</strong> domain shows strong upward
-            momentum with increasing AI adoption.
-          </p>
-        </>
-      );
+    const body = { domain: query.trim() };
+    if (company.trim()) body.company = company.trim();
+    if (topN) body.topN = Number(topN);
+    if (bottomN) body.bottomN = Number(bottomN);
 
-      setResponse(formattedResponse);
+    try {
+      setLoading(true);
+      setResponse("");
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to fetch insights");
+      }
+
+      setResponse(data.result);
+      toast.success("Insights generated successfully ✅");
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      toast.error("Failed to fetch insights. Try again later.");
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -53,48 +57,76 @@ export default function StatsPage() {
           NexusGenisis Stats
         </h1>
         <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-          Ask about any{" "}
-          <span className="font-semibold text-indigo-600">domain or topic</span>{" "}
-          to get AI-powered statistical insights
+          Enter a{" "}
+          <span className="font-semibold text-indigo-600">domain, company</span>{" "}
+          or specify{" "}
+          <span className="font-semibold text-purple-600">top/bottom</span> N
+          for AI-powered analysis
         </p>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 pb-16">
         {/* Input Section */}
         <div className="bg-white shadow-xl rounded-2xl p-6 mb-8 border border-indigo-100">
-          <div className="flex flex-col md:flex-row gap-4">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSubmit(e)}
-              placeholder="Enter a domain or topic (e.g., AI in Healthcare)"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-gray-800 placeholder-gray-400 transition-all"
-            />
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className={`px-8 py-3 rounded-xl text-white font-semibold transition-all transform hover:scale-105 ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
-              }`}
-            >
-              {loading ? "Analyzing..." : "Generate Stats"}
-            </button>
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Domain (e.g., Artificial Intelligence)"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+              <input
+                type="text"
+                placeholder="Company (optional)"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+              />
+            </div>
+
+            
+            <div className="flex flex-col md:flex-row gap-4">
+              <input
+                type="number"
+                placeholder="Top N (optional)"
+                value={topN}
+                onChange={(e) => setTopN(e.target.value)}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
+              />
+              <input
+                type="number"
+                placeholder="Bottom N (optional)"
+                value={bottomN}
+                onChange={(e) => setBottomN(e.target.value)}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-400 outline-none"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className={`flex-1 md:flex-initial md:px-8 py-3 rounded-xl text-white font-semibold transition-all transform hover:scale-105 ${
+                  loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
+                }`}
+              >
+                {loading ? "Analyzing..." : "Generate Insights"}
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* Response Section */}
-        <div className="bg-white border border-indigo-100 rounded-2xl shadow-xl p-8 transform transition-all hover:shadow-2xl">
+        <div className="bg-white border border-indigo-100 rounded-2xl shadow-xl p-8">
           {!response && !loading && (
             <div className="text-center py-12">
               <div className="text-7xl mb-4">📊</div>
               <p className="text-gray-600 text-lg font-medium">
-                Enter a topic above to receive a detailed statistical summary
+                Enter details above to receive a detailed AI-powered analysis
               </p>
               <p className="text-gray-400 text-sm mt-2">
-                Powered by AI-driven analytics
+                Data sourced from Perplexity API
               </p>
             </div>
           )}
@@ -110,10 +142,10 @@ export default function StatsPage() {
           )}
 
           {response && (
-            <div className="bg-linear-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
-              <div className="text-gray-800 whitespace-pre-line leading-relaxed text-base prose">
+            <div className="prose prose-indigo max-w-none text-gray-800 leading-relaxed">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {response}
-              </div>
+              </ReactMarkdown>
             </div>
           )}
         </div>

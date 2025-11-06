@@ -1,1 +1,9 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+.prose hr {
+   border: none !important;
+  margin: 0.5rem 0 !important;
+  height: 0 !important;
+
+}
