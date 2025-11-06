@@ -117,7 +117,7 @@ export default function AuthPages() {
 
       dispatch(loginSuccess({ user, token: data.token }));
 
-      toast.success(isLogin ? "Login Successful ✅" : "Account Created 🎉");
+      toast.success(isLogin ? "Login Successful" : "Account Created 🎉");
       navigate("/");
     } catch (error) {
       console.error(error);
