@@ -1,7 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
-body {
-  @apply bg-gray-50 text-gray-800;
+.prose hr {
+   border: none !important;
+  margin: 0.5rem 0 !important;
+  height: 0 !important;
+
 }
