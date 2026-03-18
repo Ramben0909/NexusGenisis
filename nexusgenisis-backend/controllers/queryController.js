@@ -3,8 +3,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const PERPLEX_API_KEY = process.env.PERPLEX_KEY;
-
 // 🧠 Build a dynamic and reasoning-based financial analysis prompt
 const buildPrompt = (domain, company, topN, bottomN) => {
   let prompt = `You are a global financial analyst and market researcher.
