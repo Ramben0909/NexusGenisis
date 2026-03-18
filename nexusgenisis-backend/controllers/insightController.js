@@ -3,14 +3,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize Groq client
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY_INSIGHT,
 });
 
-/**
- * 🧩 Prompt builder (same as before)
- */
 const buildFuturePrompt = (domain, company, topN, bottomN) => {
   let prompt = `You are a senior market strategist and business forecaster.
 Your task is to generate a forward-looking market and business growth forecast for the domain "${domain}".
@@ -44,9 +40,6 @@ Be specific, analytical, and use available factual or trend-based forecasting da
   return prompt;
 };
 
-/**
- * 🎯 Controller — Groq version
- */
 export const getFutureInsights = async (req, res) => {
   try {
     const { domain, company, topN, bottomN } = req.body;
@@ -62,9 +55,8 @@ export const getFutureInsights = async (req, res) => {
 
     console.log("🔮 Requesting Groq for domain:", domain);
 
-    // 🔥 Groq API call
     const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile", // best for reasoning
+      model: "llama-3.3-70b-versatile", 
       messages: [
         {
           role: "system",
@@ -86,7 +78,7 @@ export const getFutureInsights = async (req, res) => {
       source: "Groq (LLaMA 3.3)",
       query: { domain, company, topN, bottomN },
       result: answer,
-      citations: [], // ❌ Groq doesn't support built-in Google grounding like Gemini
+      citations: [], 
     });
   } catch (error) {
     console.error("❌ Groq API Backend Error:", error.message);
