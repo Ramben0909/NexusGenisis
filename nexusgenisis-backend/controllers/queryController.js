@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const client = new Groq({
-  apiKey: process.env.GROQ_API_KEY_Query,
+  apiKey: process.env.GROQ_API_KEY_QUERY,
 });
 
 // 🧠 Same prompt builder (unchanged)
@@ -49,7 +49,7 @@ export const getDomainInsight = async (req, res) => {
       });
     }
 
-    if (!process.env.GROQ_API_KEY) {
+    if (!process.env.GROQ_API_KEY_QUERY) {
       return res.status(500).json({
         success: false,
         message: "Groq API key is not configured.",

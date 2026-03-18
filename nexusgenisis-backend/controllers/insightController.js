@@ -1,11 +1,12 @@
-import axios from "axios";
+import Groq from "groq-sdk";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const PERPLEX_API_KEY = process.env.PERPLEX_KEY;
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY_INSIGHT,
+});
 
-// 🧩 Prompt builder for future predictions and business scope
 const buildFuturePrompt = (domain, company, topN, bottomN) => {
   let prompt = `You are a senior market strategist and business forecaster.
 Your task is to generate a forward-looking market and business growth forecast for the domain "${domain}".
@@ -39,7 +40,6 @@ Be specific, analytical, and use available factual or trend-based forecasting da
   return prompt;
 };
 
-// 🎯 Controller — future insights
 export const getFutureInsights = async (req, res) => {
   try {
     const { domain, company, topN, bottomN } = req.body;
@@ -51,66 +51,42 @@ export const getFutureInsights = async (req, res) => {
       });
     }
 
-    if (!PERPLEX_API_KEY) {
-      return res.status(500).json({
-        success: false,
-        message: "Perplexity API key is not configured on the server.",
-      });
-    }
-
     const prompt = buildFuturePrompt(domain, company, topN, bottomN);
 
-    console.log("🔮 Generated Future Insight Prompt:\n", prompt);
+    console.log("🔮 Requesting Groq for domain:", domain);
 
-    const response = await axios.post(
-      "https://api.perplexity.ai/chat/completions",
-      {
-        model: "sonar-pro", // high-reasoning model for forecasts
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a market futurist specializing in predicting business growth, market dynamics, and emerging investment opportunities.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${PERPLEX_API_KEY}`,
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile", 
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a market futurist specializing in predicting business growth and investment opportunities.",
         },
-        timeout: 60000,
-      }
-    );
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.5,
+    });
 
-    const answer =
-      response.data?.choices?.[0]?.message?.content ||
-      "No detailed forecast received from Perplexity.";
-
-    const citations = response.data?.citations || [];
+    const answer = response.choices[0]?.message?.content || "";
 
     res.status(200).json({
       success: true,
-      source: "Perplexity",
+      source: "Groq (LLaMA 3.3)",
       query: { domain, company, topN, bottomN },
       result: answer,
-      citations,
+      citations: [], 
     });
   } catch (error) {
-    console.error("❌ Perplexity Future Insights API Error:", error.message);
-    if (error.response) {
-      console.error("Response Data:", error.response.data);
-    }
+    console.error("❌ Groq API Backend Error:", error.message);
 
     res.status(500).json({
       success: false,
-      message:
-        "Failed to fetch future insights from Perplexity. Check your API key or request format.",
-      error: error.response?.data || error.message,
+      message: "AI generation failed. Check your GROQ_API_KEY.",
+      error: error.message,
     });
   }
 };
